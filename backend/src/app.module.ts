@@ -28,9 +28,6 @@ import { OrderModule } from './order/order.module';
     ServeStaticModule.forRoot({
       rootPath: path.join(process.cwd(), 'public', 'content', 'afisha'), //папка с файлами
       serveRoot: '/content/afisha',
-      serveStaticOptions: {
-        index: 'bg1c.jpg',
-      },
     }),
 
     // модуль фильмов (контроллер + сервис + модель)
