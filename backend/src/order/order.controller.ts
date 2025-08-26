@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { OrderService } from './order.service';
-import { OrderRequestDto } from './dto/order.dto';
+import { OrderRequestDto, OrderResponseDto } from './dto/order.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Controller('order')
 export class OrderController {
@@ -8,16 +9,11 @@ export class OrderController {
 
   //POST/order
   @Post()
-  async createBatch(@Body() body: OrderRequestDto) {
-    const results = [];
-    for (const t of body.tickets) {
-      const res = await this.orders.create({
-        filmId: t.film,
-        sessionId: t.session,
-        seat: { row: t.row, place: t.seat },
-      });
-      results.push(res);
-    }
-    return { items: results };
+  async create(@Body() dto: OrderRequestDto): Promise<OrderResponseDto> {
+    const raw = await this.orders.create(dto);
+    // Приводим ответ к DTO и уважаем @Expose
+    return plainToInstance(OrderResponseDto, raw, {
+      excludeExtraneousValues: true,
+    });
   }
 }

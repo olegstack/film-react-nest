@@ -1,67 +1,82 @@
-import { Model } from 'mongoose';
-import { CreateOrderDto } from './dto/order.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Film, FilmDocument } from 'src/afisha/films/schemas/films.schema';
+// src/order/order.service.ts
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
+import { FILMS_REPO, FilmsRepository } from 'src/repository/films.repository';
+import {
+  OrderItemResponseDto,
+  OrderRequestDto,
+  OrderResponseDto,
+} from './dto/order.dto';
 
 @Injectable()
 export class OrderService {
-  constructor(
-    @InjectModel(Film.name) private readonly filmModel: Model<FilmDocument>,
-  ) {}
+  constructor(@Inject(FILMS_REPO) private readonly films: FilmsRepository) {}
 
-  async create(dto: CreateOrderDto) {
-    const { filmId, sessionId, seat } = dto;
-    const seatKey = `${seat.row}:${seat.place}`;
-
-    // Найдем фильм и сеанс (для валидации)
-    const film = await this.filmModel.findOne({ id: filmId }).lean();
-    if (!film) {
-      throw new NotFoundException(`Film ${filmId} not found`);
+  async create(dto: OrderRequestDto): Promise<OrderResponseDto> {
+    if (!dto.tickets?.length) {
+      throw new BadRequestException('tickets must be non-empty array');
     }
 
-    const session = film.schedule.find((s) => s.id === sessionId);
-    if (!session) {
-      throw new NotFoundException(`Session ${sessionId} not found`);
+    const results: OrderItemResponseDto[] = [];
+
+    for (const t of dto.tickets) {
+      const seatKey = `${t.row}:${t.seat}`;
+
+      // 1. Проверка фильма
+      const film = await this.films.findById(t.film);
+      if (!film) {
+        throw new NotFoundException(`Film ${t.film} not found`);
+      }
+
+      // 2. Проверка сеанса
+      const session = film.schedule.find((s) => s.id === t.session);
+      if (!session) {
+        throw new NotFoundException(`Session ${t.session} not found`);
+      }
+
+      // 3. Проверка диапазона мест
+      if (
+        t.row < 1 ||
+        t.row > session.rows ||
+        t.seat < 1 ||
+        t.seat > session.seats
+      ) {
+        throw new BadRequestException('Seat is out of bounds');
+      }
+
+      // 4. Проверка занятости места
+      if (session.taken?.includes(seatKey)) {
+        throw new ConflictException('Seat already taken');
+      }
+
+      // 5. Пытаемся забронировать место
+      const reserved = await this.films.addTakenSeatAtomic(
+        t.film,
+        t.session,
+        seatKey,
+      );
+      if (!reserved) {
+        throw new ConflictException('Seat already taken');
+      }
+
+      // 6. Добавляем в ответ
+      results.push({
+        film: t.film,
+        session: t.session,
+        row: t.row,
+        seat: t.seat,
+        status: 'created',
+      });
     }
 
-    //Проверим, что место в допустимых пределах
-    if (
-      seat.row < 1 ||
-      seat.row > session.rows ||
-      seat.place < 1 ||
-      seat.place > session.seats
-    ) {
-      throw new BadRequestException('Seat is out of bounds');
-    }
-
-    //Быстрая проверка на бронирования места
-    if (session.taken?.includes(seatKey)) {
-      throw new ConflictException('Seat already taken');
-    }
-
-    const upd = await this.filmModel.updateOne(
-      { id: filmId, 'schedule.id': sessionId },
-      { $addToSet: { 'schedule.$[s].taken': seatKey } },
-      { arrayFilters: [{ 's.id': sessionId }] },
-    );
-
-    // modifiedCount === 0 то место уже было занято кем-то параллельно
-    if (upd.modifiedCount === 0) {
-      throw new ConflictException('Seat already taken');
-    }
-
-    //Вернем подтверждение
     return {
-      filmId,
-      sessionId,
-      seat,
-      status: 'created',
+      total: results.length,
+      items: results,
     };
   }
 }

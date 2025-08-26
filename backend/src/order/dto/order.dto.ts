@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   IsArray,
   IsEmail,
@@ -42,26 +42,18 @@ export class OrderRequestDto {
   tickets: TicketDto[];
 }
 
-class SeatDto {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  row: number;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  place: number;
+export class OrderItemResponseDto {
+  @Expose() film: string;
+  @Expose() session: string;
+  @Expose() row: number;
+  @Expose() seat: number;
+  @Expose() status: 'created';
 }
 
-export class CreateOrderDto {
-  @IsString()
-  filmId: string;
+export class OrderResponseDto {
+  @Expose() total: number;
 
-  @IsString()
-  sessionId: string;
-
-  @ValidateNested()
-  @Type(() => SeatDto)
-  seat: SeatDto;
+  @Expose()
+  @Type(() => OrderItemResponseDto)
+  items: OrderItemResponseDto[];
 }

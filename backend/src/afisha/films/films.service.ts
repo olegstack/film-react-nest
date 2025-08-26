@@ -1,19 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Film, FilmDocument } from './schemas/films.schema';
-import { Model } from 'mongoose';
+import { Inject, Injectable } from '@nestjs/common';
+import { FILMS_REPO, FilmsRepository } from 'src/repository/films.repository';
 
 @Injectable()
 export class FilmsService {
-  constructor(@InjectModel(Film.name) private filmModel: Model<FilmDocument>) {}
+  constructor(@Inject(FILMS_REPO) private repo: FilmsRepository) {}
 
-  async findAll(): Promise<Film[]> {
-    return this.filmModel.find().exec();
+  findAll() {
+    return this.repo.findAll();
   }
 
-  async findSchedule(id: string): Promise<Film> {
-    const film = await this.filmModel.findOne({ id }).exec();
-    if (!film) throw new NotFoundException(`Film ${id} not found`);
-    return film;
+  findSchedule(filmId: string) {
+    return this.repo.findScheduleByFilmId(filmId);
   }
 }
