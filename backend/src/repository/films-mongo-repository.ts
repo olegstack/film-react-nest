@@ -2,43 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Film, FilmDocument } from 'src/afisha/films/schemas/film.schema';
-
-export interface SessionEntity {
-  id: string;
-  daytime: string;
-  hall: number;
-  rows: number;
-  seats: number;
-  price: number;
-  taken: string[];
-}
-
-export interface FilmEntity {
-  id: string;
-  rating: number;
-  director: string;
-  tags: string[];
-  image: string;
-  cover: string;
-  title: string;
-  about: string;
-  description: string;
-  schedule: SessionEntity[];
-}
-
-export interface FilmsRepository {
-  findAll(): Promise<FilmEntity[]>;
-  findById(id: string): Promise<FilmEntity | null>;
-  findScheduleByFilmId(id: string): Promise<SessionEntity[]>;
-  addTakenSeatAtomic(
-    filmId: string,
-    sessionId: string,
-    seatKey: string,
-  ): Promise<boolean>;
-}
-
-// DI‑токен
-export const FILMS_REPO = Symbol('FILMS_REPO');
+import { FilmsRepository } from './films-repository';
 
 @Injectable()
 export class FilmsMongoRepository implements FilmsRepository {
@@ -61,6 +25,7 @@ export class FilmsMongoRepository implements FilmsRepository {
   }
 
   async addTakenSeatAtomic(filmId: string, sessionId: string, seatKey: string) {
+    // добавляем место в массив выбранного сеанса
     const res = await this.filmModel.updateOne(
       { id: filmId, 'schedule.id': sessionId },
       { $addToSet: { 'schedule.$[s].taken': seatKey } },

@@ -11,7 +11,6 @@ export class OrderController {
   @Post()
   async create(@Body() dto: OrderRequestDto): Promise<OrderResponseDto> {
     const raw = await this.orders.create(dto);
-    // Приводим ответ к DTO и уважаем @Expose
     return plainToInstance(OrderResponseDto, raw, {
       excludeExtraneousValues: true,
     });
