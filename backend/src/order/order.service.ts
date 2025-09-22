@@ -6,12 +6,14 @@ import {
   NotFoundException,
   Inject,
 } from '@nestjs/common';
-import { FILMS_REPO, FilmsRepository } from 'src/repository/films.repository';
+
 import {
   OrderItemResponseDto,
   OrderRequestDto,
   OrderResponseDto,
 } from './dto/order.dto';
+import { FILMS_REPO } from 'src/repository/token';
+import { FilmsRepository } from 'src/repository/films-repository';
 
 @Injectable()
 export class OrderService {

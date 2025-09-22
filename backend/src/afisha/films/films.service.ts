@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { FILMS_REPO, FilmsRepository } from 'src/repository/films.repository';
+import { FilmsRepository } from 'src/repository/films-repository';
+import { FILMS_REPO } from 'src/repository/token';
 
 @Injectable()
 export class FilmsService {
-  constructor(@Inject(FILMS_REPO) private repo: FilmsRepository) {}
+  constructor(@Inject(FILMS_REPO) private readonly repo: FilmsRepository) {}
 
   findAll() {
     return this.repo.findAll();

@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { FilmsService } from './films.service';
 import { FilmListResponseDto, SessionResponseDto } from './dto/films.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Controller('films')
 export class FilmsController {
@@ -8,15 +9,21 @@ export class FilmsController {
 
   @Get()
   async findAll(): Promise<FilmListResponseDto> {
-    //Заглушка списка фильмов
     const items = await this.filmsService.findAll();
-    return { total: items.length, items };
+    return plainToInstance(
+      FilmListResponseDto,
+      { total: items.length, items },
+      { excludeExtraneousValues: true },
+    );
   }
 
   @Get(':id/schedule')
   async findOneSchedule(@Param('id') id: string): Promise<SessionResponseDto> {
-    //Заглушка фильма с расписанием
     const items = await this.filmsService.findSchedule(id);
-    return { total: items.length, items };
+    return plainToInstance(
+      SessionResponseDto,
+      { total: items.length, items },
+      { excludeExtraneousValues: true },
+    );
   }
 }
