@@ -1,37 +1,35 @@
-version: '3.9'
+version: "3.9"
 
 services:
-  # ---------- PostgreSQL ----------
+  # PostgreSQL
   postgres:
-    image: postgres:14
+    image: postgres:15-alpine
     container_name: postgres_prac
-    restart: always
-    ports:
-      - '5432:5432'
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: prac
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+      POSTGRES_DB: prac
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - prac_net
 
-  # ---------- pgAdmin ----------
+  # pgAdmin
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin_prac
-    restart: always
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - '8080:80'
+      - "8080:80"
     depends_on:
       - postgres
     volumes:
@@ -39,57 +37,50 @@ services:
     networks:
       - prac_net
 
-  # ---------- Backend (NestJS) ----------
+  # Backend
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/olegstack/film-react-nest-backend:latest
     container_name: backend_prac
-    restart: always
+    restart: unless-stopped
     env_file:
       - ./backend/.env
-    environment:
-      NODE_ENV: production
+    networks:
+      - prac_net
     depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    networks:
-      - prac_net
+      - postgres
 
-  # ---------- Frontend ----------
+  # Frontend 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/olegstack/film-react-nest-frontend:latest
     container_name: frontend_prac
+    restart: unless-stopped
+    volumes:
+      - react_build:/usr/share/nginx/html
     networks:
       - prac_net
-    volumes:
-      - frontend_dist:/app/dist
 
-  # ---------- Nginx ----------
+  # Nginx
   nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
+    image: ghcr.io/olegstack/film-react-nest-nginx:latest
     container_name: nginx_prac
-    restart: always
+    restart: unless-stopped
     ports:
-      - '80:80'
+      - "80:80"
     depends_on:
       - backend
       - frontend
     volumes:
-      - frontend_dist:/usr/share/nginx/html
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - react_build:/usr/share/nginx/html
     networks:
       - prac_net
 
-# ---------- Общие сети и тома ----------
+# Общие сети 
 networks:
   prac_net:
+    driver: bridge
 
 volumes:
+  postgres_data:
   pgadmin_data:
-  frontend_dist:
+  react_build:
