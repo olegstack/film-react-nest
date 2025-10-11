@@ -1,6 +1,7 @@
 version: '3.9'
 
 services:
+  # ---------- PostgreSQL ----------
   postgres:
     image: postgres:14
     container_name: postgres_prac
@@ -14,7 +15,81 @@ services:
     volumes:
       - ./pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - prac_net
+
+  # ---------- pgAdmin ----------
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_prac
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '8080:80'
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - prac_net
+
+  # ---------- Backend (NestJS) ----------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend_prac
+    restart: always
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    networks:
+      - prac_net
+
+  # ---------- Frontend ----------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_prac
+    networks:
+      - prac_net
+    volumes:
+      - frontend_dist:/app/dist
+
+  # ---------- Nginx ----------
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx_prac
+    restart: always
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - frontend_dist:/usr/share/nginx/html
+    networks:
+      - prac_net
+
+# ---------- Общие сети и тома ----------
+networks:
+  prac_net:
+
+volumes:
+  pgadmin_data:
+  frontend_dist:
