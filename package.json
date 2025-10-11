@@ -3,5 +3,11 @@
     "@nestjs/typeorm": "^11.0.0",
     "pg": "^8.16.3",
     "typeorm": "^0.3.27"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.6",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5"
   }
 }

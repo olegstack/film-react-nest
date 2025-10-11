@@ -29,7 +29,7 @@ export class DatabaseModule {
           inject: [ConfigService],
           useFactory: (config: ConfigService) => ({
             type: 'postgres',
-            host: config.get<string>('DATABASE_URL'),
+            host: config.get<string>('DATABASE_HOST'),
             port: Number(config.get<number>('DATABASE_PORT')),
             username: config.get<string>('DATABASE_USERNAME'),
             password: config.get<string>('DATABASE_PASSWORD'),

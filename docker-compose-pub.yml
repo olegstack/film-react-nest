@@ -1,43 +1,7 @@
 version: "3.9"
 
 services:
-  # PostgreSQL
-  postgres:
-    image: postgres:15-alpine
-    container_name: postgres_prac
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: prac
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - prac_net
-
-  # pgAdmin
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin_prac
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "8080:80"
-    depends_on:
-      - postgres
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - prac_net
-
-  # Backend
+  #  Backend 
   backend:
     image: ghcr.io/olegstack/film-react-nest-backend:latest
     container_name: backend_prac
@@ -49,38 +13,71 @@ services:
     depends_on:
       - postgres
 
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_prac
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - prac_net
+
+  # pgAdmin 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_prac
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - prac_net
+    depends_on:
+      - postgres
+
   # Frontend 
-  frontend:
+  frontend-builder:
     image: ghcr.io/olegstack/film-react-nest-frontend:latest
     container_name: frontend_prac
     restart: unless-stopped
     volumes:
       - react_build:/usr/share/nginx/html
-    networks:
-      - prac_net
 
-  # Nginx
+  #  Nginx
   nginx:
     image: ghcr.io/olegstack/film-react-nest-nginx:latest
     container_name: nginx_prac
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - react_build:/usr/share/nginx/html
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
     depends_on:
       - backend
-      - frontend
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - react_build:/usr/share/nginx/html
+      - frontend-builder
     networks:
       - prac_net
 
-# Общие сети 
-networks:
-  prac_net:
-    driver: bridge
-
+# Томы
 volumes:
   postgres_data:
   pgadmin_data:
   react_build:
+
+# Сеть 
+networks:
+  prac_net:
+    driver: bridge
